@@ -18,7 +18,7 @@ public class RealAiAnalysisClient : IAiAnalysisClient
         _configuration = configuration;
     }
 
-    public async Task<InvestigationSummary> AnalyzeAsync(AgentInfo agent, List<LogFileContent> logFiles)
+    public async Task<InvestigationSummary> AnalyzeAsync(AgentInfo agent, List<LogFileContent> logFiles, string? problemDescription = null)
     {
         var baseUrl = _configuration["AiService:BaseUrl"]
             ?? throw new InvalidOperationException("AiService:BaseUrl is not configured in appsettings.json");
@@ -29,6 +29,7 @@ public class RealAiAnalysisClient : IAiAnalysisClient
             team = agent.Team,
             clientVersion = agent.ClientVersion,
             configVersion = agent.ConfigVersion,
+            problemDescription,
             logFiles = logFiles.Select(f => new { fileName = f.FileName, content = f.Content })
         });
 

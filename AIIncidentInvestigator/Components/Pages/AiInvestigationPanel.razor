@@ -9,9 +9,25 @@
         <MudButton Color="Color.Primary" Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.AutoAwesome"
                    Disabled="@(_loading || SelectedFiles.Count == 0)"
-                   OnClick="GenerateAnalysis">
+                   OnClick="OpenProblemDescriptionDialog">
             @(_loading ? "Analyzing..." : "Generate AI Analysis")
         </MudButton>
+
+        <MudDialog @bind-Visible="_showDialog" Options="_dialogOptions">
+            <TitleContent>Generate AI Analysis</TitleContent>
+            <DialogContent>
+                <MudTextField @bind-Value="_problemDescription"
+                              Label="Problem Description (optional)"
+                              Placeholder="Describe the issue you're investigating..."
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              FullWidth="true" />
+            </DialogContent>
+            <DialogActions>
+                <MudButton OnClick="@(() => _showDialog = false)">Cancel</MudButton>
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ConfirmAndGenerate">Analyze</MudButton>
+            </DialogActions>
+        </MudDialog>
 
         @if (SelectedFiles.Count == 0 && !_loading && _result is null)
         {
@@ -116,6 +132,25 @@
     private bool _loading;
     private bool _error;
     private InvestigationSummary? _result;
+    private bool _showDialog;
+    private string? _problemDescription;
+    private readonly DialogOptions _dialogOptions = new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private void OpenProblemDescriptionDialog()
+    {
+        if (SelectedFiles.Count == 0)
+        {
+            return;
+        }
+
+        _showDialog = true;
+    }
+
+    private async Task ConfirmAndGenerate()
+    {
+        _showDialog = false;
+        await GenerateAnalysis();
+    }
 
     private async Task GenerateAnalysis()
     {
@@ -137,7 +172,7 @@
                 logFiles.Add(new LogFileContent { FileName = fileName, Content = content });
             }
 
-            _result = await AiClient.AnalyzeAsync(Agent, logFiles);
+            _result = await AiClient.AnalyzeAsync(Agent, logFiles, _problemDescription);
         }
         catch
         {

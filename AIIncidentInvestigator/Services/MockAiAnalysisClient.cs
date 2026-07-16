@@ -8,7 +8,7 @@ namespace AIIncidentInvestigator.Services;
 /// </summary>
 public class MockAiAnalysisClient : IAiAnalysisClient
 {
-    public async Task<InvestigationSummary> AnalyzeAsync(AgentInfo agent, List<LogFileContent> logFiles)
+    public async Task<InvestigationSummary> AnalyzeAsync(AgentInfo agent, List<LogFileContent> logFiles, string? problemDescription = null)
     {
         await Task.Delay(1500);
 
