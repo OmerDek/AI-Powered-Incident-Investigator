@@ -24,13 +24,18 @@ public class BedrockProvider : ILLMProvider
 
         _modelId = config["AWS:ModelId"] ?? "openai.gpt-oss-120b-1:0";
 
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_BEARER_TOKEN_BEDROCK")))
-            throw new InvalidOperationException(
-                "AWS_BEARER_TOKEN_BEDROCK environment variable is not set. " +
-                "Set it to the API key from the AWS Bedrock quickstart and restart the app.");
+        var hasBearerToken = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_BEARER_TOKEN_BEDROCK"));
+        var hasAccessKey = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
 
-        // The SDK auto-detects AWS_BEARER_TOKEN_BEDROCK and signs requests with it —
-        // no explicit credentials needed.
+        if (!hasBearerToken && !hasAccessKey)
+            throw new InvalidOperationException(
+                "No AWS credentials configured. Set either AWS_BEARER_TOKEN_BEDROCK (short-lived Bedrock API key) " +
+                "or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY (standard IAM credentials) and restart the app.");
+
+        // If AWS_BEARER_TOKEN_BEDROCK is set, the SDK auto-detects and signs requests with it.
+        // Otherwise it falls back to the standard AWS credential chain (AWS_ACCESS_KEY_ID/
+        // AWS_SECRET_ACCESS_KEY env vars, ~/.aws/credentials, or an instance role) automatically —
+        // no explicit Credentials needed either way.
         _client = new AmazonBedrockRuntimeClient(new AmazonBedrockRuntimeConfig
         {
             RegionEndpoint = RegionEndpoint.GetBySystemName(region)
