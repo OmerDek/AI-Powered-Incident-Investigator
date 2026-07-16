@@ -12,6 +12,14 @@
 {
     <MudAlert Severity="Severity.Warning">Agent "@AgentName" not found.</MudAlert>
 }
+else if (_loadingLogs)
+{
+    <AgentInfoCard Agent="_agent" />
+    <div class="d-flex align-center mt-4" style="min-height: 220px;">
+        <MudProgressCircular Indeterminate="true" Class="mr-3" />
+        <MudText>Loading log files from S3...</MudText>
+    </div>
+}
 else if (_availableLogFiles.Count == 0)
 {
     <AgentInfoCard Agent="_agent" />
@@ -62,17 +70,27 @@ else
     private HashSet<string> _selectedFiles = new();
     private string? _previewFileName;
     private string? _previewContent;
+    private bool _loadingLogs = true;
 
     protected override async Task OnInitializedAsync()
     {
         _agent = await AgentDirectory.GetAgentAsync(AgentName);
-        _availableLogFiles = await LogFileService.GetAvailableLogFilesAsync(AgentName);
 
         _breadcrumbs = new()
         {
             new BreadcrumbItem("Node Watch", href: "/"),
             new BreadcrumbItem(AgentName, href: null, disabled: true)
         };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _agent is not null)
+        {
+            _availableLogFiles = await LogFileService.GetAvailableLogFilesAsync(AgentName);
+            _loadingLogs = false;
+            StateHasChanged();
+        }
     }
 
     private void OnSelectedFilesChanged(HashSet<string> selected)
