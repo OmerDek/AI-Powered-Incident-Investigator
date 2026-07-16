@@ -31,4 +31,6 @@ public class MockLogFileService : ILogFileService
 
     public Task<string> GetLogFileContentAsync(string agentName, string fileName)
         => Task.FromResult(Files.TryGetValue(fileName, out var content) ? content : "(log file not found)");
+
+    public Task<bool> HasLogsAsync(string agentName) => Task.FromResult(true);
 }

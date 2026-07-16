@@ -38,7 +38,7 @@ public class S3LogFileService : ILogFileService
         do
         {
             response = await _s3.ListObjectsV2Async(request);
-            fileNames.AddRange(response.S3Objects
+            fileNames.AddRange((response.S3Objects ?? new List<S3Object>())
                 .Select(o => o.Key[prefix.Length..])
                 .Where(name => !string.IsNullOrEmpty(name)));
             request.ContinuationToken = response.NextContinuationToken;
@@ -54,5 +54,17 @@ public class S3LogFileService : ILogFileService
         using var response = await _s3.GetObjectAsync(_bucketName, key);
         using var reader = new StreamReader(response.ResponseStream);
         return await reader.ReadToEndAsync();
+    }
+
+    public async Task<bool> HasLogsAsync(string agentName)
+    {
+        var response = await _s3.ListObjectsV2Async(new ListObjectsV2Request
+        {
+            BucketName = _bucketName,
+            Prefix = $"{agentName}/",
+            MaxKeys = 1
+        });
+
+        return response.S3Objects is { Count: > 0 };
     }
 }

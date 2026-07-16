@@ -1,5 +1,6 @@
 @page "/"
 @inject IAgentDirectoryService AgentDirectory
+@inject ILogFileService LogFileService
 @inject NavigationManager Nav
 
 <PageTitle>Node Watch</PageTitle>
@@ -44,23 +45,38 @@
             <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.ClientStatus)">@context.StatusDetail</MudChip>
         </MudTd>
         <MudTd DataLabel="Log Status">
-            @if (!string.IsNullOrEmpty(context.LogStatus))
+            @if (!_logsChecked)
             {
-                <MudChip T="string" Size="Size.Small" Color="Color.Success">@context.LogStatus</MudChip>
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else if (HasLogs(context.AgentName))
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">Logs Available</MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.ErrorOutline">No Logs Found</MudChip>
             }
         </MudTd>
         <MudTd DataLabel="">
-            <MudIconButton Icon="@Icons.Material.Filled.ManageSearch" Size="Size.Small" Color="Color.Primary"
-                           title="Troubleshoot this agent's data"
-                           OnClick="@(() => Nav.NavigateTo($"/troubleshoot/{context.AgentName}"))" />
+            <MudTooltip Text="@(HasLogs(context.AgentName) ? "Troubleshoot this agent's data" : "No logs available in S3 for this agent")">
+                <MudIconButton Icon="@Icons.Material.Filled.ManageSearch" Size="Size.Small" Color="Color.Primary"
+                               Disabled="@(!_logsChecked || !HasLogs(context.AgentName))"
+                               OnClick="@(() => Nav.NavigateTo($"/troubleshoot/{context.AgentName}"))" />
+            </MudTooltip>
         </MudTd>
     </RowTemplate>
 </MudTable>
 
 @code {
     private List<AgentInfo> _agents = new();
+    private Dictionary<string, bool> _logsPresent = new();
+    private bool _logsChecked;
     private string _search = "";
     private DateTime _lastUpdated = DateTime.Now;
+
+    private bool HasLogs(string agentName) =>
+        _logsPresent.TryGetValue(agentName, out var hasLogs) && hasLogs;
 
     private IEnumerable<AgentInfo> FilteredAgents =>
         string.IsNullOrWhiteSpace(_search)
@@ -79,12 +95,26 @@
     protected override async Task OnInitializedAsync()
     {
         _agents = await AgentDirectory.GetAgentsAsync();
+        await CheckLogsAsync();
     }
 
     private async Task Refresh()
     {
         _agents = await AgentDirectory.GetAgentsAsync();
         _lastUpdated = DateTime.Now;
+        await CheckLogsAsync();
+    }
+
+    private async Task CheckLogsAsync()
+    {
+        _logsChecked = false;
+        StateHasChanged();
+
+        var results = await Task.WhenAll(_agents.Select(async a =>
+            (a.AgentName, HasLogs: await LogFileService.HasLogsAsync(a.AgentName))));
+
+        _logsPresent = results.ToDictionary(r => r.AgentName, r => r.HasLogs);
+        _logsChecked = true;
     }
 
     private Color StatusColor(string status) => status switch
