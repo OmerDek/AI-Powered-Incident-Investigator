@@ -1,0 +1,40 @@
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="6" sm="2">
+            <MudText Typo="Typo.caption">Agent</MudText>
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">@Agent.AgentName</MudText>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudText Typo="Typo.caption">Team</MudText>
+            <MudText>@Agent.Team</MudText>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudText Typo="Typo.caption">Client Version</MudText>
+            <MudText>@Agent.ClientVersion</MudText>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudText Typo="Typo.caption">Config Version</MudText>
+            <MudText>@Agent.ConfigVersion</MudText>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudText Typo="Typo.caption">Module</MudText>
+            <MudText>@Agent.Module</MudText>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudText Typo="Typo.caption">Client Status</MudText>
+            <MudChip T="string" Size="Size.Small" Color="@StatusColor(Agent.ClientStatus)">@Agent.StatusDetail</MudChip>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public AgentInfo Agent { get; set; } = null!;
+
+    private Color StatusColor(string status) => status switch
+    {
+        "Active" => Color.Success,
+        "Inactive" => Color.Warning,
+        _ => Color.Default
+    };
+}
