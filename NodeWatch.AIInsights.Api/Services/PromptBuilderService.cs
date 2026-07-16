@@ -9,6 +9,10 @@ public class PromptBuilderService : IPromptBuilderService
         var logFilesBlock = string.Join("\n\n", request.LogFiles.Select(f =>
             $"--- File: {f.FileName} ---\n{f.Content}"));
 
+        var problemDescriptionBlock = string.IsNullOrWhiteSpace(request.ProblemDescription)
+            ? "No specific problem description was provided — investigate the logs for any notable issues."
+            : request.ProblemDescription;
+
         return $$"""
             You are an AI operations analyst. Analyze the following log files from a monitored agent and return a structured investigation summary.
 
@@ -18,11 +22,14 @@ public class PromptBuilderService : IPromptBuilderService
               Client Version: {{request.ClientVersion}}
               Config Version: {{request.ConfigVersion}}
 
+            Reported Problem:
+              {{problemDescriptionBlock}}
+
             Log Files ({{request.LogFiles.Count}} file(s)):
             {{logFilesBlock}}
 
             Instructions:
-            1. Correlate information across ALL provided log files — do not analyze each file in isolation.
+            1. Focus the investigation on the reported problem above — use it to prioritize which log lines and patterns matter most, while still correlating across ALL provided log files.
             2. Identify the root cause hypothesis, tracing the failure chain across files where relevant.
             3. Generate a concise incident summary describing what happened and its impact.
             4. List key investigation findings — each finding should be a specific, evidence-backed observation.

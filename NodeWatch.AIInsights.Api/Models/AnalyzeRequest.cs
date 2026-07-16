@@ -6,5 +6,6 @@ public class AnalyzeRequest
     public string Team { get; set; } = string.Empty;
     public string ClientVersion { get; set; } = string.Empty;
     public string ConfigVersion { get; set; } = string.Empty;
+    public string? ProblemDescription { get; set; }
     public List<LogFile> LogFiles { get; set; } = new();
 }
