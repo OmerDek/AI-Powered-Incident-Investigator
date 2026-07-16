@@ -1,0 +1,76 @@
+@page "/troubleshoot/{AgentName}"
+@inject IAgentDirectoryService AgentDirectory
+@inject ILogFileService LogFileService
+
+<PageTitle>Troubleshoot Data</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="mb-2 pl-0" />
+<MudText Typo="Typo.h4" Class="mb-4">Troubleshoot Data</MudText>
+
+@if (_agent is null)
+{
+    <MudAlert Severity="Severity.Warning">Agent "@AgentName" not found.</MudAlert>
+}
+else
+{
+    <AgentInfoCard Agent="_agent" />
+
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="5">
+            <AvailableLogFilesPanel LogFiles="_availableLogFiles"
+                                    SelectedFiles="_selectedFiles"
+                                    SelectedFilesChanged="OnSelectedFilesChanged"
+                                    OnFileClicked="PreviewFile"
+                                    PreviewedFile="@_previewFileName" />
+        </MudItem>
+        <MudItem xs="12" md="7">
+            @if (string.IsNullOrEmpty(_previewFileName))
+            {
+                <MudCard Class="mb-4 d-flex align-center justify-center" Style="min-height: 220px;">
+                    <MudText Color="Color.Secondary">No file selected to preview</MudText>
+                </MudCard>
+            }
+            else
+            {
+                <LogPreviewPanel FileName="@_previewFileName" Content="@_previewContent" />
+            }
+        </MudItem>
+    </MudGrid>
+
+    <AiInvestigationPanel Agent="_agent" SelectedFiles="_selectedFiles" />
+}
+
+@code {
+    [Parameter]
+    public string AgentName { get; set; } = "";
+
+    private AgentInfo? _agent;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<string> _availableLogFiles = new();
+    private HashSet<string> _selectedFiles = new();
+    private string? _previewFileName;
+    private string? _previewContent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _agent = await AgentDirectory.GetAgentAsync(AgentName);
+        _availableLogFiles = await LogFileService.GetAvailableLogFilesAsync(AgentName);
+
+        _breadcrumbs = new()
+        {
+            new BreadcrumbItem("Node Watch", href: "/"),
+            new BreadcrumbItem(AgentName, href: null, disabled: true)
+        };
+    }
+
+    private void OnSelectedFilesChanged(HashSet<string> selected)
+    {
+        _selectedFiles = selected;
+    }
+
+    private async Task PreviewFile(string fileName)
+    {
+        _previewFileName = fileName;
+        _previewContent = await LogFileService.GetLogFileContentAsync(AgentName, fileName);
+    }
+}

@@ -1,0 +1,96 @@
+@page "/"
+@inject IAgentDirectoryService AgentDirectory
+@inject NavigationManager Nav
+
+<PageTitle>Node Watch</PageTitle>
+
+<div class="d-flex align-center justify-space-between mb-4">
+    <MudText Typo="Typo.h4">Node Watch</MudText>
+    <div class="d-flex align-center">
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-1">
+            Last Updated: @_lastUpdated.ToString("MMM d, yyyy h:mm:ss tt")
+        </MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" OnClick="Refresh" />
+    </div>
+</div>
+
+<MudPaper Class="pa-3 mb-4 d-flex align-center flex-wrap" Style="gap:16px;">
+    <MudTextField T="string" @bind-Value="_search" Placeholder="Search agents"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" Class="flex-grow-1" Style="min-width:240px;" />
+    <MudChip T="string" Color="Color.Success">@ActivePercent% Active</MudChip>
+    <MudChip T="string" Color="Color.Warning">@InactivePercent% Inactive</MudChip>
+    <MudChip T="string" Color="Color.Default">@OfflinePercent% Offline</MudChip>
+</MudPaper>
+
+<MudTable Items="@FilteredAgents" Hover="true" Dense="true" T="AgentInfo">
+    <HeaderContent>
+        <MudTh>Agent Name</MudTh>
+        <MudTh>Team</MudTh>
+        <MudTh>Config Version</MudTh>
+        <MudTh>Module</MudTh>
+        <MudTh>Client Version</MudTh>
+        <MudTh>Client Status</MudTh>
+        <MudTh>Log Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Agent Name">@context.AgentName</MudTd>
+        <MudTd DataLabel="Team">@context.Team</MudTd>
+        <MudTd DataLabel="Config Version">@context.ConfigVersion</MudTd>
+        <MudTd DataLabel="Module">@context.Module</MudTd>
+        <MudTd DataLabel="Client Version">@context.ClientVersion</MudTd>
+        <MudTd DataLabel="Client Status">
+            <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.ClientStatus)">@context.StatusDetail</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Log Status">
+            @if (!string.IsNullOrEmpty(context.LogStatus))
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success">@context.LogStatus</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="">
+            <MudIconButton Icon="@Icons.Material.Filled.ManageSearch" Size="Size.Small" Color="Color.Primary"
+                           title="Troubleshoot this agent's data"
+                           OnClick="@(() => Nav.NavigateTo($"/troubleshoot/{context.AgentName}"))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<AgentInfo> _agents = new();
+    private string _search = "";
+    private DateTime _lastUpdated = DateTime.Now;
+
+    private IEnumerable<AgentInfo> FilteredAgents =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _agents
+            : _agents.Where(a =>
+                a.AgentName.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+                a.Team.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+    private int ActivePercent => Percent(a => a.ClientStatus == "Active");
+    private int InactivePercent => Percent(a => a.ClientStatus == "Inactive");
+    private int OfflinePercent => Percent(a => a.ClientStatus == "Offline");
+
+    private int Percent(Func<AgentInfo, bool> predicate) =>
+        _agents.Count == 0 ? 0 : (int)Math.Round(100.0 * _agents.Count(predicate) / _agents.Count);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _agents = await AgentDirectory.GetAgentsAsync();
+    }
+
+    private async Task Refresh()
+    {
+        _agents = await AgentDirectory.GetAgentsAsync();
+        _lastUpdated = DateTime.Now;
+    }
+
+    private Color StatusColor(string status) => status switch
+    {
+        "Active" => Color.Success,
+        "Inactive" => Color.Warning,
+        _ => Color.Default
+    };
+}

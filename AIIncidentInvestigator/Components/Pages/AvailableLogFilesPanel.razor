@@ -1,0 +1,58 @@
+<MudCard Class="mb-4">
+    <MudCardContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Available Log Files</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+            Select one or more files to include in the analysis. Click a file name to preview it.
+        </MudText>
+
+        <MudList T="string" Dense="true" Style="max-height: 420px; overflow-y: auto;">
+            @foreach (var file in LogFiles)
+            {
+                <MudListItem T="string">
+                    <div class="d-flex align-center">
+                        <MudCheckBox T="bool"
+                                     Value="@SelectedFiles.Contains(file)"
+                                     ValueChanged="@(isChecked => ToggleSelection(file, isChecked))"
+                                     Dense="true" />
+                        <MudText Style="cursor:pointer; text-decoration: underline;"
+                                  Class="@(PreviewedFile == file ? "mud-primary-text" : "")"
+                                  @onclick="@(() => OnFileClicked.InvokeAsync(file))">
+                            @file
+                        </MudText>
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<string> LogFiles { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public HashSet<string> SelectedFiles { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<HashSet<string>> SelectedFilesChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnFileClicked { get; set; }
+
+    [Parameter]
+    public string? PreviewedFile { get; set; }
+
+    private async Task ToggleSelection(string file, bool isChecked)
+    {
+        if (isChecked)
+        {
+            SelectedFiles.Add(file);
+        }
+        else
+        {
+            SelectedFiles.Remove(file);
+        }
+
+        await SelectedFilesChanged.InvokeAsync(SelectedFiles);
+    }
+}
